@@ -1,0 +1,978 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Weekly Shop</title>
+<meta name="theme-color" content="#FFF5F0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Weekly Shop">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Libre+Baskerville:wght@700&display=swap">
+<style>
+:root {
+  --bg: #FFF5F0;
+  --fg: #1A1A1A;
+  --accent: #E8745E;
+  --accent-hover: #C85A45;
+  --muted: #666666;
+  --shade: #F5E6DD;
+  --deep: #EAD3C6;
+  --sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --serif: "Libre Baskerville", Georgia, "Times New Roman", serif;
+  --tabbar: 64px;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.45;
+  -webkit-tap-highlight-color: transparent;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus { outline: none; }
+:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
+
+main {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(var(--tabbar) + 40px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));
+}
+h1 {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1.2;
+  margin: 8px 0 20px;
+}
+h1 .dot { color: var(--accent); }
+h2 {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 32px 0 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+h2 .count { color: var(--muted); font-weight: 400; }
+p { margin: 0 0 12px; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+.note { font-size: 14px; color: var(--muted); }
+
+.banner {
+  background: var(--shade);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.banner p { font-size: 15px; }
+
+.switch { display: flex; border: 2px solid var(--fg); border-radius: 2px; margin-bottom: 8px; }
+.switch button {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  padding: 8px;
+}
+.switch button + button { border-left: 2px solid var(--fg); }
+.switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
+.list { border-top: 1px solid var(--deep); }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 60px;
+  padding: 10px 0;
+  border: 0;
+  border-bottom: 1px solid var(--deep);
+  background: transparent;
+  text-align: left;
+}
+.row .txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.row .nm { overflow-wrap: anywhere; }
+.box {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--fg);
+  position: relative;
+  background: transparent;
+}
+[aria-checked="true"] > .box { background: var(--accent); border-color: var(--accent); }
+[aria-checked="true"] > .box::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 3px;
+  width: 7px;
+  height: 14px;
+  border: solid var(--bg);
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
+}
+.done .nm { text-decoration: line-through; color: var(--muted); }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--deep);
+}
+.item .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.item .meta { font-size: 15px; color: var(--muted); }
+
+.expand { padding: 4px 0 16px 42px; border-bottom: 1px solid var(--deep); }
+.group { margin-top: 12px; }
+.group .lbl { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+.group .lbl .note { font-weight: 400; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 2px solid var(--fg);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 15px;
+}
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--fg); font-weight: 600; }
+
+.btn {
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 2px solid var(--fg);
+  border-radius: 2px;
+  background: var(--fg);
+  color: var(--bg);
+  font-weight: 600;
+  font-size: 15px;
+}
+.btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+.btn.alt { background: transparent; color: var(--fg); }
+.btn.alt:hover { background: var(--shade); border-color: var(--fg); }
+.btn.full { width: 100%; margin-top: 28px; min-height: 52px; font-size: 17px; }
+.link {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+.link:hover { color: var(--accent-hover); }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; align-items: center; }
+
+.add { display: flex; gap: 8px; margin: 8px 0 4px; }
+.add input { flex: 1; min-width: 0; }
+input[type="text"], textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 2px solid var(--fg);
+  border-radius: 4px;
+  background: #FFFFFF;
+  font-size: 17px;
+}
+textarea { min-height: 120px; resize: vertical; line-height: 1.4; }
+label.field { display: block; margin-top: 20px; }
+label.field > span { display: block; font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+label.field > span .note { font-weight: 400; }
+.choice { border-top: 1px solid var(--deep); margin-top: 20px; padding-top: 4px; }
+.error { color: var(--accent-hover); font-weight: 600; font-size: 15px; margin-top: 12px; }
+.ok { font-weight: 600; font-size: 15px; margin-top: 12px; }
+
+.confirm { background: var(--shade); padding: 16px; margin-top: 20px; }
+.confirm p { margin: 0; }
+
+.progress { margin: 8px 0 4px; }
+.progress .big { font-size: 44px; font-weight: 700; color: var(--accent); line-height: 1; }
+.progress .of { color: var(--muted); font-size: 15px; margin-left: 4px; }
+.bar { height: 4px; background: var(--shade); margin-top: 12px; }
+.bar > div { height: 100%; background: var(--accent); transition: width 0.25s ease; }
+@media (prefers-reduced-motion: reduce) { .bar > div { transition: none; } }
+
+.empty { padding: 24px 0; color: var(--muted); }
+
+nav.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg);
+  border-top: 1px solid var(--deep);
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  z-index: 10;
+}
+nav.tabs .in { display: flex; max-width: 560px; margin: 0 auto; }
+nav.tabs button {
+  flex: 1;
+  height: var(--tabbar);
+  border: 0;
+  border-top: 4px solid transparent;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted);
+}
+nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: var(--fg); }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav class="tabs" aria-label="Sections">
+  <div class="in">
+    <button type="button" data-act="tab" data-v="shop">Shop list</button>
+    <button type="button" data-act="tab" data-v="week">This week</button>
+    <button type="button" data-act="tab" data-v="admin">Admin</button>
+  </div>
+</nav>
+<script>
+(function () {
+  'use strict';
+
+  var KEY = 'weeklyshop.v1';
+  var UIKEY = 'weeklyshop.ui';
+
+  // ---------- helpers ----------
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function norm(s) { return String(s).trim().toLowerCase(); }
+  function isObj(o) { return !!o && typeof o === 'object' && !Array.isArray(o); }
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+
+  // Trim, drop blanks and case-insensitive duplicates, keep first spelling.
+  function cleanList(a) {
+    var out = [], seen = {};
+    (Array.isArray(a) ? a : []).forEach(function (x) {
+      if (typeof x !== 'string') return;
+      var t = x.trim();
+      if (!t || seen[t.toLowerCase()]) return;
+      seen[t.toLowerCase()] = 1;
+      out.push(t);
+    });
+    return out;
+  }
+  function lines(text) { return cleanList(String(text || '').split('\n')); }
+  function hasName(list, name) {
+    var k = norm(name);
+    return list.some(function (x) { return norm(x) === k; });
+  }
+
+  // ---------- state ----------
+
+  function emptyPlan() { return { meals: [], need: {}, picks: {}, extras: [], ticks: {} }; }
+  function emptyState() {
+    return { examples: false, regulars: [], possibles: [], meals: [], plan: emptyPlan(), thisWeek: null };
+  }
+
+  function exampleState() {
+    return sanitize({
+      examples: true,
+      regulars: ['Semi-skimmed milk', 'Bread', 'Bananas', 'Eggs', 'Butter'],
+      possibles: ['Toilet roll', 'Coffee', 'Washing-up liquid', 'Bin bags'],
+      meals: [
+        {
+          id: 'exbolog', name: 'Spaghetti bolognese',
+          always: ['Beef mince', 'Chopped tomatoes', 'Carrots'],
+          ifOut: ['Olive oil', 'Garlic', 'Parmesan'],
+          groups: [{ label: 'Pasta', options: ['Spaghetti', 'Tagliatelle'] }]
+        },
+        {
+          id: 'exstirf', name: 'Chicken stir fry',
+          always: ['Chicken breast', 'Peppers', 'Carrots'],
+          ifOut: ['Soy sauce'],
+          groups: [{ label: 'Noodles', options: ['Egg noodles', 'Rice noodles'] }]
+        },
+        {
+          id: 'exfishp', name: 'Fish pie',
+          always: ['Fish pie mix', 'Potatoes', 'Peas'],
+          ifOut: [],
+          groups: []
+        }
+      ],
+      plan: { meals: ['exbolog', 'exstirf'] },
+      thisWeek: null
+    });
+  }
+
+  // Coerce anything stored or restored into the known shape.
+  function sanitize(raw) {
+    var s = emptyState();
+    if (!isObj(raw)) return s;
+    s.examples = raw.examples === true;
+    s.regulars = cleanList(raw.regulars);
+    s.possibles = cleanList(raw.possibles);
+
+    var ids = {};
+    (Array.isArray(raw.meals) ? raw.meals : []).forEach(function (m) {
+      if (!isObj(m) || typeof m.name !== 'string' || !m.name.trim()) return;
+      var id = typeof m.id === 'string' && m.id && !ids[m.id] ? m.id : uid();
+      while (ids[id]) id = uid();
+      ids[id] = 1;
+      var seen = {}, groups = [];
+      (Array.isArray(m.groups) ? m.groups : []).forEach(function (g) {
+        if (!isObj(g) || typeof g.label !== 'string') return;
+        var label = g.label.trim(), opts = cleanList(g.options);
+        if (!label || !opts.length || seen[label.toLowerCase()]) return;
+        seen[label.toLowerCase()] = 1;
+        groups.push({ label: label, options: opts });
+      });
+      s.meals.push({ id: id, name: m.name.trim(), always: cleanList(m.always), ifOut: cleanList(m.ifOut), groups: groups });
+    });
+
+    var p = isObj(raw.plan) ? raw.plan : {};
+    s.plan.meals = (Array.isArray(p.meals) ? p.meals : []).filter(function (id, i, a) {
+      return typeof id === 'string' && ids[id] && a.indexOf(id) === i;
+    });
+    if (isObj(p.need)) Object.keys(p.need).forEach(function (k) { if (p.need[k] === true) s.plan.need[k] = true; });
+    if (isObj(p.picks)) Object.keys(p.picks).forEach(function (k) { if (typeof p.picks[k] === 'string') s.plan.picks[k] = p.picks[k]; });
+    s.plan.extras = cleanList(p.extras);
+    if (isObj(p.ticks)) Object.keys(p.ticks).forEach(function (k) { if (p.ticks[k] === true) s.plan.ticks[norm(k)] = true; });
+
+    var w = raw.thisWeek;
+    if (isObj(w) && typeof w.shoppedAt === 'string' && !isNaN(new Date(w.shoppedAt).getTime())) {
+      s.thisWeek = {
+        shoppedAt: w.shoppedAt,
+        meals: (Array.isArray(w.meals) ? w.meals : []).filter(function (m) {
+          return isObj(m) && typeof m.name === 'string' && m.name.trim();
+        }).map(function (m) {
+          return {
+            id: typeof m.id === 'string' ? m.id : '',
+            name: m.name.trim(),
+            detail: typeof m.detail === 'string' ? m.detail : '',
+            done: m.done === true
+          };
+        })
+      };
+    }
+    return s;
+  }
+
+  function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(KEY); } catch (e) { /* storage blocked */ }
+    if (raw == null) return exampleState();
+    try { return sanitize(JSON.parse(raw)); } catch (e) { return emptyState(); }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage blocked */ }
+  }
+  function loadUi() {
+    var u = {};
+    try { u = JSON.parse(localStorage.getItem(UIKEY)) || {}; } catch (e) { u = {}; }
+    return {
+      tab: ['shop', 'week', 'admin'].indexOf(u.tab) >= 0 ? u.tab : 'shop',
+      mode: u.mode === 'basket' ? 'basket' : 'plan',
+      admin: ['regulars', 'possibles', 'meals'].indexOf(u.admin) >= 0 ? u.admin : 'regulars'
+    };
+  }
+  function saveUi() {
+    try { localStorage.setItem(UIKEY, JSON.stringify(ui)); } catch (e) { /* storage blocked */ }
+  }
+
+  var state = load();
+  var ui = loadUi();
+  var draft = null; // meal being edited, kept in memory only
+  var tmp = {};     // short-lived view state: confirms, backup boxes, messages
+
+  function mealById(id) {
+    for (var i = 0; i < state.meals.length; i++) if (state.meals[i].id === id) return state.meals[i];
+    return null;
+  }
+  function validPick(st, meal, group) {
+    var v = st.plan.picks[meal.id + '|' + group.label];
+    if (!v || v === '__none') return null;
+    for (var i = 0; i < group.options.length; i++) if (group.options[i] === v) return v;
+    return null;
+  }
+
+  // ---------- list building ----------
+
+  function buildBasket(st) {
+    var items = [], map = {};
+    function add(name, section, source, mealName) {
+      var k = norm(name);
+      if (!k) return;
+      var it = map[k];
+      if (!it) {
+        it = map[k] = { key: k, name: name.trim(), section: section, notes: [], _src: [], _meals: [] };
+        items.push(it);
+      }
+      if (it._src.indexOf(source) < 0) it._src.push(source);
+      if (mealName && it._meals.indexOf(mealName) < 0) it._meals.push(mealName);
+    }
+    st.regulars.forEach(function (n) { add(n, 'Regulars', 'r'); });
+    st.possibles.forEach(function (n) { if (st.plan.need['p|' + n]) add(n, 'Needed', 'p'); });
+    st.plan.extras.forEach(function (n) { add(n, 'Needed', 'e'); });
+    st.plan.meals.forEach(function (id) {
+      var m = null;
+      for (var i = 0; i < st.meals.length; i++) if (st.meals[i].id === id) m = st.meals[i];
+      if (!m) return;
+      var src = 'm|' + m.id;
+      m.always.forEach(function (n) { add(n, 'For meals', src, m.name); });
+      m.ifOut.forEach(function (n) { if (st.plan.need['m|' + m.id + '|' + n]) add(n, 'For meals', src, m.name); });
+      m.groups.forEach(function (g) {
+        var v = validPick(st, m, g);
+        if (v) add(v, 'For meals', src, m.name);
+      });
+    });
+    return items.map(function (it) {
+      return { key: it.key, name: it.name, section: it.section, notes: it._src.length > 1 ? it._meals.slice() : [] };
+    });
+  }
+  window.__buildBasket = buildBasket;
+
+  var SECTIONS = ['Regulars', 'Needed', 'For meals'];
+
+  // ---------- rendering ----------
+
+  function heading(text) { return '<h1>' + esc(text) + '<span class="dot">.</span></h1>'; }
+
+  function checkRow(opts) {
+    return '<button type="button" class="row' + (opts.checked ? ' done' : '') + '" role="checkbox" aria-checked="' + (opts.checked ? 'true' : 'false') + '" ' + opts.attrs + '>' +
+      '<span class="box" aria-hidden="true"></span>' +
+      '<span class="txt"><span class="nm">' + esc(opts.name) + '</span>' +
+      (opts.note ? '<span class="note">' + esc(opts.note) + '</span>' : '') +
+      '</span></button>';
+  }
+  function plainRow(opts) {
+    return '<button type="button" class="row" role="checkbox" aria-checked="' + (opts.checked ? 'true' : 'false') + '" ' + opts.attrs + '>' +
+      '<span class="box" aria-hidden="true"></span>' +
+      '<span class="txt"><span class="nm">' + esc(opts.name) + '</span></span></button>';
+  }
+  function chip(label, pressed, attrs) {
+    return '<button type="button" class="chip" aria-pressed="' + (pressed ? 'true' : 'false') + '" ' + attrs + '>' + esc(label) + '</button>';
+  }
+  function switcher(act, current, options) {
+    return '<div class="switch">' + options.map(function (o) {
+      return '<button type="button" data-act="' + act + '" data-v="' + esc(o[0]) + '" aria-pressed="' + (o[0] === current ? 'true' : 'false') + '">' + esc(o[1]) + '</button>';
+    }).join('') + '</div>';
+  }
+  function addBox(id, placeholder, act, extra) {
+    return '<div class="add"><input type="text" id="' + id + '" placeholder="' + esc(placeholder) + '" autocomplete="off" enterkeyhint="done" data-enter="' + act + '"' + (extra || '') + '>' +
+      '<button type="button" class="btn" data-act="' + act + '"' + (extra || '') + '>Add</button></div>';
+  }
+
+  function renderShop() {
+    var basket = buildBasket(state);
+    var ticked = basket.filter(function (it) { return state.plan.ticks[it.key]; }).length;
+    var h = heading('Shop list');
+    if (state.examples) {
+      h += '<div class="banner"><p>These are example items and meals, so you can see how it works.</p>' +
+        '<button type="button" class="btn alt" data-act="clearExamples">Clear examples</button></div>';
+    }
+    h += switcher('mode', ui.mode, [['plan', 'Plan'], ['basket', 'Basket ' + ticked + '/' + basket.length]]);
+    h += ui.mode === 'basket' ? renderBasket(basket, ticked) : renderPlan(basket);
+    return h;
+  }
+
+  function renderPlan(basket) {
+    var p = state.plan, h = '';
+
+    h += '<h2>Meals</h2>';
+    if (!state.meals.length) {
+      h += '<p class="empty">No meals yet. Add some in Admin.</p>';
+    } else {
+      h += '<div class="list">';
+      state.meals.forEach(function (m) {
+        var on = p.meals.indexOf(m.id) >= 0;
+        h += plainRow({ name: m.name, checked: on, attrs: 'data-act="toggleMeal" data-id="' + esc(m.id) + '"' });
+        if (!on) return;
+        h += '<div class="expand">';
+        if (!m.ifOut.length && !m.groups.length) {
+          h += '<p class="note">Everything for this meal is added automatically.</p>';
+        }
+        if (m.ifOut.length) {
+          h += '<div class="group"><div class="lbl">Need any of these?</div><div class="chips">' +
+            m.ifOut.map(function (n) {
+              var key = 'm|' + m.id + '|' + n;
+              return chip(n, !!p.need[key], 'data-act="need" data-key="' + esc(key) + '"');
+            }).join('') + '</div></div>';
+        }
+        m.groups.forEach(function (g) {
+          var key = m.id + '|' + g.label, v = p.picks[key];
+          var picked = validPick(state, m, g);
+          h += '<div class="group"><div class="lbl">' + esc(g.label) +
+            (!picked && v !== '__none' ? ' <span class="note">not chosen</span>' : '') + '</div><div class="chips">' +
+            g.options.map(function (o) {
+              return chip(o, picked === o, 'data-act="pick" data-key="' + esc(key) + '" data-v="' + esc(o) + '"');
+            }).join('') +
+            chip('None', v === '__none', 'data-act="pick" data-key="' + esc(key) + '" data-v="__none"') +
+            '</div></div>';
+        });
+        h += '</div>';
+      });
+      h += '</div>';
+    }
+
+    h += '<h2>Possibly needed</h2>';
+    if (!state.possibles.length) {
+      h += '<p class="note">None set up. Add some in Admin.</p>';
+    } else {
+      h += '<div class="chips">' + state.possibles.map(function (n) {
+        var key = 'p|' + n;
+        return chip(n, !!p.need[key], 'data-act="need" data-key="' + esc(key) + '"');
+      }).join('') + '</div>';
+    }
+
+    h += '<h2>Extras</h2>';
+    h += addBox('extraInput', 'Add a one-off item', 'addExtra');
+    if (p.extras.length) {
+      h += '<div class="list">' + p.extras.map(function (n, i) {
+        return '<div class="item"><span class="nm">' + esc(n) + '</span><button type="button" class="link" data-act="removeExtra" data-i="' + i + '" aria-label="Remove ' + esc(n) + '">Remove</button></div>';
+      }).join('') + '</div>';
+    }
+
+    h += '<h2>Regulars</h2>';
+    h += state.regulars.length
+      ? '<p class="small">' + esc(state.regulars.join(', ')) + '</p>'
+      : '<p class="note">None set up. Add some in Admin.</p>';
+
+    h += '<button type="button" class="btn full" data-act="mode" data-v="basket">View basket (' + plural(basket.length, 'item', 'items') + ')</button>';
+    return h;
+  }
+
+  function renderBasket(basket, ticked) {
+    if (!basket.length) {
+      return '<p class="empty">Nothing in the basket yet. Go to Plan, then tick meals, mark what you need or add extras.</p>';
+    }
+    var total = basket.length, pct = Math.round(ticked / total * 100);
+    var h = '<div class="progress"><span class="big">' + ticked + '</span><span class="of">of ' + total + ' in basket</span>' +
+      '<div class="bar"><div style="width:' + pct + '%"></div></div></div>';
+    SECTIONS.forEach(function (sec) {
+      var its = basket.filter(function (it) { return it.section === sec; });
+      if (!its.length) return;
+      var t = its.filter(function (it) { return state.plan.ticks[it.key]; }).length;
+      h += '<h2>' + esc(sec) + ' <span class="count">' + t + '/' + its.length + '</span></h2><div class="list">';
+      its.forEach(function (it) {
+        h += checkRow({
+          name: it.name,
+          note: it.notes.length ? it.notes.join(', ') : '',
+          checked: !!state.plan.ticks[it.key],
+          attrs: 'data-act="tick" data-key="' + esc(it.key) + '"'
+        });
+      });
+      h += '</div>';
+    });
+    if (tmp.confirmFinish) {
+      var left = total - ticked;
+      h += '<div class="confirm"><p>' + (left
+        ? (left === 1 ? '1 item is' : left + ' items are') + ' not ticked. Finish the shop anyway?'
+        : 'Everything is ticked. Finish the shop?') + '</p>' +
+        '<div class="actions"><button type="button" class="btn" data-act="finish">Finish shop</button>' +
+        '<button type="button" class="btn alt" data-act="finishCancel">Cancel</button></div></div>';
+    } else {
+      h += '<button type="button" class="btn full" data-act="finishAsk">Finish shop</button>';
+    }
+    return h;
+  }
+
+  function shopDate(iso) {
+    var d = new Date(iso);
+    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    return days[d.getDay()] + ' ' + d.getDate() + ' ' + months[d.getMonth()];
+  }
+
+  function renderWeek() {
+    var h = heading('This week'), w = state.thisWeek;
+    if (!w) return h + '<p class="empty">Your meals will show here once you finish a shop.</p>';
+    var done = w.meals.filter(function (m) { return m.done; }).length;
+    h += '<p class="muted small">Shopped ' + esc(shopDate(w.shoppedAt)) + '</p>';
+    if (!w.meals.length) return h + '<p class="empty">No meals were planned for this shop.</p>';
+    h += '<div class="progress"><span class="big">' + done + '</span><span class="of">of ' + plural(w.meals.length, 'meal', 'meals') + ' cooked</span>' +
+      '<div class="bar"><div style="width:' + Math.round(done / w.meals.length * 100) + '%"></div></div></div>';
+    h += '<div class="list" style="margin-top:24px">' + w.meals.map(function (m, i) {
+      return checkRow({ name: m.name, note: m.detail, checked: m.done, attrs: 'data-act="cooked" data-i="' + i + '"' });
+    }).join('') + '</div>';
+    return h;
+  }
+
+  function renderAdmin() {
+    var h = heading('Admin');
+    if (draft) return h + renderEditor();
+    h += switcher('admin', ui.admin, [['regulars', 'Regulars'], ['possibles', 'Possibles'], ['meals', 'Meals']]);
+    if (ui.admin === 'meals') {
+      h += '<h2>Meals</h2>';
+      if (state.meals.length) {
+        h += '<div class="list">' + state.meals.map(function (m) {
+          var meta = m.always.length + ' always, ' + m.ifOut.length + ' if out, ' + plural(m.groups.length, 'choice', 'choices');
+          return '<div class="item"><span class="nm">' + esc(m.name) + '<br><span class="meta">' + esc(meta) + '</span></span>' +
+            '<button type="button" class="link" data-act="editMeal" data-id="' + esc(m.id) + '" aria-label="Edit ' + esc(m.name) + '">Edit</button></div>';
+        }).join('') + '</div>';
+      } else {
+        h += '<p class="empty">No meals yet.</p>';
+      }
+      h += '<div class="actions"><button type="button" class="btn" data-act="newMeal">Add a meal</button></div>';
+    } else {
+      var list = ui.admin;
+      var items = state[list];
+      h += '<h2>' + (list === 'regulars' ? 'On the list every week' : 'Shown each week to mark if needed') + '</h2>';
+      h += addBox('listInput', list === 'regulars' ? 'Add a regular' : 'Add a possible', 'addItem', ' data-list="' + list + '"');
+      if (items.length) {
+        h += '<div class="list">' + items.map(function (n, i) {
+          return '<div class="item"><span class="nm">' + esc(n) + '</span><button type="button" class="link" data-act="removeItem" data-list="' + list + '" data-i="' + i + '" aria-label="Remove ' + esc(n) + '">Remove</button></div>';
+        }).join('') + '</div>';
+      } else {
+        h += '<p class="empty">Nothing here yet.</p>';
+      }
+    }
+    h += renderBackup();
+    return h;
+  }
+
+  function renderEditor() {
+    var d = draft;
+    var h = '<h2>' + (d.id ? 'Edit meal' : 'New meal') + '</h2>';
+    h += '<label class="field"><span>Name</span><input type="text" data-draft="name" value="' + esc(d.name) + '" autocomplete="off"></label>';
+    h += '<label class="field"><span>Always needed <span class="note">one per line</span></span><textarea data-draft="always">' + esc(d.always) + '</textarea></label>';
+    h += '<label class="field"><span>Only if you are out <span class="note">one per line</span></span><textarea data-draft="ifOut">' + esc(d.ifOut) + '</textarea></label>';
+    h += '<h2>Choose one</h2>';
+    if (!d.groups.length) h += '<p class="note">For example, which pasta or which rice.</p>';
+    d.groups.forEach(function (g, i) {
+      h += '<div class="choice">' +
+        '<label class="field"><span>Choice name</span><input type="text" data-draft="glabel" data-i="' + i + '" value="' + esc(g.label) + '" autocomplete="off"></label>' +
+        '<label class="field"><span>Options <span class="note">one per line</span></span><textarea data-draft="gopts" data-i="' + i + '">' + esc(g.options) + '</textarea></label>' +
+        '<div class="actions"><button type="button" class="link" data-act="removeGroup" data-i="' + i + '">Remove choice</button></div></div>';
+    });
+    h += '<div class="actions"><button type="button" class="btn alt" data-act="addGroup">Add a choice</button></div>';
+    if (d.error) h += '<p class="error" role="alert">' + esc(d.error) + '</p>';
+    h += '<div class="actions" style="margin-top:28px"><button type="button" class="btn" data-act="saveMeal">Save</button>' +
+      '<button type="button" class="btn alt" data-act="cancelMeal">Cancel</button></div>';
+    if (d.id) {
+      if (d.confirmDelete) {
+        h += '<div class="confirm"><p>Delete this meal? It will also come off the plan.</p><div class="actions">' +
+          '<button type="button" class="btn" data-act="deleteMeal">Delete</button>' +
+          '<button type="button" class="btn alt" data-act="deleteCancel">Keep it</button></div></div>';
+      } else {
+        h += '<div class="actions"><button type="button" class="link" data-act="deleteAsk">Delete meal</button></div>';
+      }
+    }
+    return h;
+  }
+
+  function renderBackup() {
+    var h = '<h2>Backup</h2><p class="note">Your data lives only in this browser. Copy a backup now and then and keep it somewhere safe.</p>';
+    h += '<div class="actions"><button type="button" class="btn alt" data-act="copyBackup">Copy backup</button>' +
+      '<button type="button" class="btn alt" data-act="restoreOpen">Restore</button></div>';
+    if (tmp.backupMsg) h += '<p class="ok" role="status">' + esc(tmp.backupMsg) + '</p>';
+    if (tmp.backupText != null) {
+      h += '<label class="field"><span>Copy this text and keep it safe</span><textarea id="backupText" readonly>' + esc(tmp.backupText) + '</textarea></label>';
+    }
+    if (tmp.restoreOpen) {
+      h += '<label class="field"><span>Paste a backup</span><textarea id="restoreText"></textarea></label>' +
+        '<p class="note">Restoring replaces everything in the app.</p>' +
+        '<div class="actions"><button type="button" class="btn" data-act="restore">Restore backup</button>' +
+        '<button type="button" class="btn alt" data-act="restoreCancel">Cancel</button></div>';
+    }
+    if (tmp.restoreErr) h += '<p class="error" role="alert">' + esc(tmp.restoreErr) + '</p>';
+    if (tmp.restoreMsg) h += '<p class="ok" role="status">' + esc(tmp.restoreMsg) + '</p>';
+    return h;
+  }
+
+  var app = document.getElementById('app');
+
+  function render() {
+    app.innerHTML = ui.tab === 'week' ? renderWeek() : ui.tab === 'admin' ? renderAdmin() : renderShop();
+    var tabs = document.querySelectorAll('nav.tabs button');
+    for (var i = 0; i < tabs.length; i++) {
+      if (tabs[i].getAttribute('data-v') === ui.tab) tabs[i].setAttribute('aria-current', 'page');
+      else tabs[i].removeAttribute('aria-current');
+    }
+  }
+
+  // Save, re-render, keep the scroll position.
+  function commit() {
+    var y = window.scrollY || 0;
+    save();
+    render();
+    window.scrollTo(0, y);
+  }
+  // Tab and mode changes start at the top.
+  function goto() {
+    saveUi();
+    tmp = {};
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- actions ----------
+
+  function addItem(list, input) {
+    var v = input ? input.value.trim() : '';
+    if (!v) return false;
+    if (!hasName(list, v)) list.push(v);
+    input.value = '';
+    return true;
+  }
+
+  function finishShop() {
+    var p = state.plan;
+    state.thisWeek = {
+      shoppedAt: new Date().toISOString(),
+      meals: p.meals.map(mealById).filter(Boolean).map(function (m) {
+        return {
+          id: m.id,
+          name: m.name,
+          detail: m.groups.map(function (g) { return validPick(state, m, g); }).filter(Boolean).join(', '),
+          done: false
+        };
+      })
+    };
+    state.plan = emptyPlan();
+    ui.tab = 'week';
+    ui.mode = 'plan';
+    save();
+    goto();
+  }
+
+  function startEdit(m) {
+    draft = m
+      ? { id: m.id, name: m.name, always: m.always.join('\n'), ifOut: m.ifOut.join('\n'),
+          groups: m.groups.map(function (g) { return { label: g.label, options: g.options.join('\n') }; }) }
+      : { id: null, name: '', always: '', ifOut: '', groups: [] };
+    tmp = {};
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function saveMeal() {
+    var d = draft, name = d.name.trim();
+    if (!name) { d.error = 'Give the meal a name.'; return render(); }
+    var groups = [], seen = {};
+    for (var i = 0; i < d.groups.length; i++) {
+      var label = d.groups[i].label.trim(), opts = lines(d.groups[i].options);
+      if (!label && !opts.length) continue;
+      if (!label) { d.error = 'Each choice needs a name.'; return render(); }
+      if (!opts.length) { d.error = 'The choice "' + label + '" needs at least one option.'; return render(); }
+      if (seen[label.toLowerCase()]) { d.error = 'Two choices are called "' + label + '". Give each a different name.'; return render(); }
+      seen[label.toLowerCase()] = 1;
+      groups.push({ label: label, options: opts });
+    }
+    var meal = { id: d.id || uid(), name: name, always: lines(d.always), ifOut: lines(d.ifOut), groups: groups };
+    while (!d.id && mealById(meal.id)) meal.id = uid();
+    var idx = -1;
+    state.meals.forEach(function (m, j) { if (m.id === meal.id) idx = j; });
+    if (idx >= 0) state.meals[idx] = meal; else state.meals.push(meal);
+    draft = null;
+    commit();
+  }
+
+  function deleteMeal() {
+    var id = draft.id;
+    state.meals = state.meals.filter(function (m) { return m.id !== id; });
+    state.plan.meals = state.plan.meals.filter(function (x) { return x !== id; });
+    Object.keys(state.plan.need).forEach(function (k) { if (k.indexOf('m|' + id + '|') === 0) delete state.plan.need[k]; });
+    Object.keys(state.plan.picks).forEach(function (k) { if (k.indexOf(id + '|') === 0) delete state.plan.picks[k]; });
+    draft = null;
+    commit();
+  }
+
+  function copyBackup() {
+    var json = JSON.stringify(state, null, 2);
+    function fallback() { tmp.backupMsg = ''; tmp.backupText = json; render(); }
+    tmp.restoreErr = tmp.restoreMsg = '';
+    try {
+      if (!navigator.clipboard || !navigator.clipboard.writeText) return fallback();
+      navigator.clipboard.writeText(json).then(function () {
+        tmp.backupText = null;
+        tmp.backupMsg = 'Backup copied. Paste it somewhere safe, such as a note or an email to yourself.';
+        render();
+      }, fallback);
+    } catch (e) { fallback(); }
+  }
+
+  function restore() {
+    var box = document.getElementById('restoreText');
+    var text = box ? box.value : '';
+    var data;
+    tmp.restoreErr = tmp.restoreMsg = '';
+    try { data = JSON.parse(text); } catch (e) { data = null; }
+    if (!isObj(data) || !Array.isArray(data.meals) || !Array.isArray(data.regulars)) {
+      tmp.restoreErr = 'That is not a valid backup. Nothing has changed.';
+      return render();
+    }
+    state = sanitize(data);
+    tmp = { restoreMsg: 'Backup restored.' };
+    commit();
+  }
+
+  function act(el) {
+    var a = el.getAttribute('data-act');
+    var id = el.getAttribute('data-id');
+    var key = el.getAttribute('data-key');
+    var v = el.getAttribute('data-v');
+    var i = parseInt(el.getAttribute('data-i'), 10);
+    var p = state.plan;
+
+    switch (a) {
+      case 'tab':
+        if (ui.tab === v) return;
+        ui.tab = v;
+        return goto();
+      case 'mode':
+        ui.mode = v === 'basket' ? 'basket' : 'plan';
+        return goto();
+      case 'admin':
+        ui.admin = v;
+        return goto();
+
+      case 'clearExamples':
+        state = emptyState();
+        tmp = {};
+        return commit();
+
+      case 'toggleMeal':
+        var at = p.meals.indexOf(id);
+        if (at >= 0) p.meals.splice(at, 1); else if (mealById(id)) p.meals.push(id);
+        return commit();
+      case 'need':
+        if (p.need[key]) delete p.need[key]; else p.need[key] = true;
+        return commit();
+      case 'pick':
+        if (p.picks[key] === v) delete p.picks[key]; else p.picks[key] = v;
+        return commit();
+      case 'addExtra':
+        if (!addItem(p.extras, document.getElementById('extraInput'))) return;
+        commit();
+        var ex = document.getElementById('extraInput');
+        if (ex) ex.focus();
+        return;
+      case 'removeExtra':
+        p.extras.splice(i, 1);
+        return commit();
+
+      case 'tick':
+        if (p.ticks[key]) delete p.ticks[key]; else p.ticks[key] = true;
+        return commit();
+      case 'finishAsk':
+        tmp.confirmFinish = true;
+        return render();
+      case 'finishCancel':
+        tmp.confirmFinish = false;
+        return render();
+      case 'finish':
+        return finishShop();
+
+      case 'cooked':
+        if (state.thisWeek && state.thisWeek.meals[i]) state.thisWeek.meals[i].done = !state.thisWeek.meals[i].done;
+        return commit();
+
+      case 'addItem':
+        var list = el.getAttribute('data-list');
+        if (list !== 'regulars' && list !== 'possibles') return;
+        if (!addItem(state[list], document.getElementById('listInput'))) return;
+        commit();
+        var li = document.getElementById('listInput');
+        if (li) li.focus();
+        return;
+      case 'removeItem':
+        var l2 = el.getAttribute('data-list');
+        if (l2 === 'regulars' || l2 === 'possibles') state[l2].splice(i, 1);
+        return commit();
+
+      case 'newMeal':
+        return startEdit(null);
+      case 'editMeal':
+        return startEdit(mealById(id));
+      case 'addGroup':
+        draft.groups.push({ label: '', options: '' });
+        return render();
+      case 'removeGroup':
+        draft.groups.splice(i, 1);
+        return render();
+      case 'saveMeal':
+        return saveMeal();
+      case 'cancelMeal':
+        draft = null;
+        render();
+        return window.scrollTo(0, 0);
+      case 'deleteAsk':
+        draft.confirmDelete = true;
+        return render();
+      case 'deleteCancel':
+        draft.confirmDelete = false;
+        return render();
+      case 'deleteMeal':
+        return deleteMeal();
+
+      case 'copyBackup':
+        return copyBackup();
+      case 'restoreOpen':
+        tmp.restoreOpen = true;
+        tmp.restoreErr = tmp.restoreMsg = tmp.backupMsg = '';
+        tmp.backupText = null;
+        render();
+        var rb = document.getElementById('restoreText');
+        if (rb) rb.focus();
+        return;
+      case 'restoreCancel':
+        tmp.restoreOpen = false;
+        tmp.restoreErr = '';
+        return render();
+      case 'restore':
+        return restore();
+    }
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest ? e.target.closest('[data-act]') : null;
+    if (el) act(el);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    var el = e.target;
+    if (el && el.getAttribute && el.getAttribute('data-enter')) {
+      e.preventDefault();
+      var btn = el.parentNode.querySelector('[data-act="' + el.getAttribute('data-enter') + '"]');
+      if (btn) act(btn);
+    }
+  });
+
+  // Typing in the meal editor updates the draft only, so focus and the keyboard stay put.
+  document.addEventListener('input', function (e) {
+    var el = e.target, f = el.getAttribute && el.getAttribute('data-draft');
+    if (!f || !draft) return;
+    var i = parseInt(el.getAttribute('data-i'), 10);
+    if (f === 'glabel') draft.groups[i].label = el.value;
+    else if (f === 'gopts') draft.groups[i].options = el.value;
+    else draft[f] = el.value;
+  });
+
+  render();
+
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* offline support unavailable */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>
