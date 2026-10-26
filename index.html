@@ -213,6 +213,20 @@ label.field > span .note { font-weight: 400; }
 
 .empty { padding: 24px 0; color: var(--muted); }
 
+.syncbar {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 0;
+  background: var(--shade);
+  text-align: left;
+  font-size: 15px;
+  font-weight: 600;
+}
+.syncbar:hover { background: var(--deep); }
+
 nav.tabs {
   position: fixed;
   left: 0;
@@ -238,7 +252,7 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
 </style>
 </head>
 <body>
-<main id="app"></main>
+<main><div id="syncbar"></div><div id="app"></div></main>
 <nav class="tabs" aria-label="Sections">
   <div class="in">
     <button type="button" data-act="tab" data-v="shop">Shop list</button>
@@ -252,6 +266,12 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
 
   var KEY = 'weeklyshop.v1';
   var UIKEY = 'weeklyshop.ui';
+  var SYNCKEY = 'weeklyshop.sync';
+
+  // OAuth client ID from Google Cloud. Empty means sync is not set up and stays hidden.
+  var GOOGLE_CLIENT_ID = '';
+  var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
+  var DRIVE_FILE = 'weeklyshop.json';
 
   // ---------- helpers ----------
 
@@ -287,7 +307,7 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
 
   function emptyPlan() { return { meals: [], need: {}, picks: {}, extras: [], ticks: {} }; }
   function emptyState() {
-    return { examples: false, regulars: [], possibles: [], meals: [], plan: emptyPlan(), thisWeek: null };
+    return { updatedAt: '', examples: false, regulars: [], possibles: [], meals: [], plan: emptyPlan(), thisWeek: null };
   }
 
   function exampleState() {
@@ -324,6 +344,7 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
   function sanitize(raw) {
     var s = emptyState();
     if (!isObj(raw)) return s;
+    if (typeof raw.updatedAt === 'string' && !isNaN(new Date(raw.updatedAt).getTime())) s.updatedAt = raw.updatedAt;
     s.examples = raw.examples === true;
     s.regulars = cleanList(raw.regulars);
     s.possibles = cleanList(raw.possibles);
@@ -379,8 +400,14 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
     if (raw == null) return exampleState();
     try { return sanitize(JSON.parse(raw)); } catch (e) { return emptyState(); }
   }
-  function save() {
+  function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage blocked */ }
+  }
+  // A local change: stamp it, store it, and queue a push to Drive.
+  function save() {
+    state.updatedAt = new Date().toISOString();
+    persist();
+    queueSync(1500);
   }
   function loadUi() {
     var u = {};
@@ -399,6 +426,159 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
   var ui = loadUi();
   var draft = null; // meal being edited, kept in memory only
   var tmp = {};     // short-lived view state: confirms, backup boxes, messages
+
+  // ---------- Google Drive sync ----------
+  // One JSON file in the app's hidden Drive folder. Whichever copy was saved later wins,
+  // except on a device's first link, where the Drive copy wins.
+
+  function loadSync() {
+    var s = {};
+    try { s = JSON.parse(localStorage.getItem(SYNCKEY)) || {}; } catch (e) { s = {}; }
+    return {
+      enabled: s.enabled === true,
+      linked: s.linked === true,
+      token: typeof s.token === 'string' ? s.token : '',
+      exp: typeof s.exp === 'number' ? s.exp : 0,
+      lastSync: typeof s.lastSync === 'string' ? s.lastSync : ''
+    };
+  }
+  function saveSync() {
+    try { localStorage.setItem(SYNCKEY, JSON.stringify(sync)); } catch (e) { /* storage blocked */ }
+  }
+
+  var sync = loadSync();
+  var syncState = 'idle'; // idle, busy, auth, error, offline
+  var syncTimer = null, syncBusy = false, syncAgain = false, tokenClient = null, syncBarHtml = null;
+  var DRIVE_API = 'https://www.googleapis.com/drive/v3/files';
+  var DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
+
+  function syncOn() { return !!GOOGLE_CLIENT_ID && sync.enabled; }
+  function hasToken() { return !!sync.token && Date.now() < sync.exp; }
+
+  function setSyncState(s) {
+    if (syncState === s) return;
+    syncState = s;
+    renderSyncBar();
+    if (ui.tab === 'admin' && !draft && !typing()) keepScroll(render);
+  }
+
+  function initGis() {
+    if (!GOOGLE_CLIENT_ID || tokenClient || document.getElementById('gis')) return;
+    var s = document.createElement('script');
+    s.id = 'gis';
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = function () {
+      tokenClient = window.google.accounts.oauth2.initTokenClient({
+        client_id: GOOGLE_CLIENT_ID,
+        scope: DRIVE_SCOPE,
+        callback: function (r) {
+          if (!r || r.error || !r.access_token) return setSyncState('auth');
+          sync.token = r.access_token;
+          sync.exp = Date.now() + (Number(r.expires_in || 3600) - 60) * 1000;
+          sync.enabled = true;
+          saveSync();
+          tmp.syncMsg = '';
+          runSync();
+        },
+        error_callback: function () { setSyncState('auth'); }
+      });
+    };
+    s.onerror = function () { s.parentNode.removeChild(s); }; // offline: try again later
+    document.head.appendChild(s);
+  }
+
+  // Must run straight from a tap, or the browser blocks Google's sign-in window.
+  function connectSync() {
+    if (!tokenClient) {
+      initGis();
+      tmp.syncMsg = 'Google sign-in is still loading. Try again in a moment.';
+      if (ui.tab === 'admin') keepScroll(render);
+      return;
+    }
+    tokenClient.requestAccessToken({ prompt: sync.linked ? '' : 'consent' });
+  }
+
+  function disconnectSync() {
+    if (sync.token && window.google) window.google.accounts.oauth2.revoke(sync.token, function () {});
+    clearTimeout(syncTimer);
+    sync = { enabled: false, linked: false, token: '', exp: 0, lastSync: '' };
+    saveSync();
+    syncState = 'idle';
+    renderSyncBar();
+    keepScroll(render);
+  }
+
+  function drive(method, url, body, type) {
+    var opts = { method: method, headers: { Authorization: 'Bearer ' + sync.token } };
+    if (body != null) { opts.body = body; opts.headers['Content-Type'] = type; }
+    return fetch(url, opts).then(function (res) {
+      if (res.status === 401) {
+        sync.token = '';
+        saveSync();
+        throw { auth: true };
+      }
+      if (!res.ok) throw new Error('Drive ' + res.status);
+      return res.json();
+    });
+  }
+
+  function pushToDrive(id) {
+    var body = JSON.stringify(state);
+    if (id) return drive('PATCH', DRIVE_UPLOAD + '/' + id + '?uploadType=media', body, 'application/json');
+    var b = 'weeklyshop' + uid();
+    var meta = JSON.stringify({ name: DRIVE_FILE, parents: ['appDataFolder'] });
+    var multipart = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta +
+      '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + body + '\r\n--' + b + '--';
+    return drive('POST', DRIVE_UPLOAD + '?uploadType=multipart&fields=id', multipart, 'multipart/related; boundary=' + b);
+  }
+
+  function adopt(remote) {
+    var a = document.activeElement, id = a && a.id, val = a && a.value;
+    state = remote;
+    persist();
+    keepScroll(render);
+    var el = id && document.getElementById(id);
+    if (el) { el.value = val; el.focus(); }
+  }
+
+  function queueSync(ms) {
+    if (!syncOn()) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(runSync, ms || 0);
+  }
+
+  function runSync() {
+    clearTimeout(syncTimer);
+    if (!syncOn()) return;
+    if (!hasToken()) return setSyncState('auth');
+    if (syncBusy) { syncAgain = true; return; }
+    syncBusy = true;
+    setSyncState('busy');
+    var first = !sync.linked;
+    var q = encodeURIComponent("name='" + DRIVE_FILE + "'");
+    drive('GET', DRIVE_API + '?spaces=appDataFolder&fields=files(id)&q=' + q).then(function (r) {
+      var id = r.files && r.files[0] ? r.files[0].id : '';
+      if (!id) return pushToDrive('');
+      return drive('GET', DRIVE_API + '/' + id + '?alt=media').then(function (data) {
+        var remote = sanitize(data);
+        if (first || remote.updatedAt > state.updatedAt) return adopt(remote);
+        if (remote.updatedAt < state.updatedAt) return pushToDrive(id);
+      });
+    }).then(function () {
+      sync.linked = true;
+      sync.lastSync = new Date().toISOString();
+      saveSync();
+      done('idle');
+    }, function (e) {
+      done(e && e.auth ? 'auth' : navigator.onLine === false ? 'offline' : 'error');
+    });
+    function done(s) {
+      syncBusy = false;
+      setSyncState(s);
+      if (syncAgain) { syncAgain = false; if (s === 'idle') runSync(); }
+    }
+  }
 
   function mealById(id) {
     for (var i = 0; i < state.meals.length; i++) if (state.meals[i].id === id) return state.meals[i];
@@ -642,8 +822,48 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
         h += '<p class="empty">Nothing here yet.</p>';
       }
     }
+    h += renderSync();
     h += renderBackup();
     return h;
+  }
+
+  function clock(iso) {
+    var d = new Date(iso);
+    return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+  }
+
+  function renderSync() {
+    if (!GOOGLE_CLIENT_ID) return '';
+    var h = '<h2>Sync</h2>';
+    if (!sync.enabled) {
+      h += '<p class="note">Save your lists to Google Drive to use them on your phone and computer. If Drive already holds your lists, they replace the ones on this device.</p>' +
+        '<div class="actions"><button type="button" class="btn alt" data-act="syncConnect">Connect Google Drive</button></div>';
+    } else {
+      var status = {
+        busy: 'Syncing now.',
+        auth: 'Not connected right now. Reconnect to sync.',
+        error: 'The last sync failed.',
+        offline: 'Offline. Changes will sync when you are back online.',
+        idle: sync.lastSync ? 'Synced with Google Drive at ' + clock(sync.lastSync) + '.' : 'Connected to Google Drive.'
+      }[syncState];
+      h += '<p class="small">' + esc(status) + '</p><div class="actions">' +
+        (hasToken()
+          ? '<button type="button" class="btn alt" data-act="syncNow">Sync now</button>'
+          : '<button type="button" class="btn alt" data-act="syncConnect">Reconnect</button>') +
+        '<button type="button" class="link" data-act="syncOff">Disconnect</button></div>';
+    }
+    if (tmp.syncMsg) h += '<p class="note">' + esc(tmp.syncMsg) + '</p>';
+    return h;
+  }
+
+  function renderSyncBar() {
+    var h = '';
+    if (syncOn() && syncState === 'auth') {
+      h = '<button type="button" class="syncbar" data-act="syncConnect">Not synced. Tap to reconnect Google Drive.</button>';
+    } else if (syncOn() && syncState === 'error') {
+      h = '<button type="button" class="syncbar" data-act="syncNow">Sync failed. Tap to try again.</button>';
+    }
+    if (h !== syncBarHtml) document.getElementById('syncbar').innerHTML = syncBarHtml = h;
   }
 
   function renderEditor() {
@@ -704,6 +924,16 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
       if (tabs[i].getAttribute('data-v') === ui.tab) tabs[i].setAttribute('aria-current', 'page');
       else tabs[i].removeAttribute('aria-current');
     }
+  }
+
+  function keepScroll(fn) {
+    var y = window.scrollY || 0;
+    fn();
+    window.scrollTo(0, y);
+  }
+  function typing() {
+    var a = document.activeElement;
+    return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && app.contains(a);
   }
 
   // Save, re-render, keep the scroll position.
@@ -937,6 +1167,13 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
         return render();
       case 'restore':
         return restore();
+
+      case 'syncConnect':
+        return connectSync();
+      case 'syncNow':
+        return runSync();
+      case 'syncOff':
+        return disconnectSync();
     }
   }
 
@@ -966,6 +1203,19 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
   });
 
   render();
+
+  if (GOOGLE_CLIENT_ID) {
+    initGis();
+    if (sync.enabled) runSync();
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') runSync();
+    });
+    window.addEventListener('online', function () { initGis(); runSync(); });
+    window.addEventListener('offline', function () { if (syncOn()) setSyncState('offline'); });
+    setInterval(function () {
+      if (document.visibilityState === 'visible') runSync();
+    }, 60000);
+  }
 
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', function () {

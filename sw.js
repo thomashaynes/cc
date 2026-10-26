@@ -1,5 +1,5 @@
 // Change CACHE on every release so installed copies update.
-var CACHE = 'weeklyshop-2026-10-23a';
+var CACHE = 'weeklyshop-2026-10-26a';
 var SHELL = [
   './',
   './index.html',
