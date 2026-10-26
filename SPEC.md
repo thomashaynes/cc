@@ -70,7 +70,8 @@ Stored in `localStorage` under `weeklyshop.v1` as one JSON object:
     "need": { "p|Coffee": true, "m|k3j9x2a|Olive oil": true },
     "picks": { "k3j9x2a|Pasta": "Tagliatelle" },
     "extras": ["Birthday candles"],
-    "ticks": { "beef mince": true }
+    "ticks": { "beef mince": true },
+    "skips": { "bread": true }
   },
   "thisWeek": {
     "shoppedAt": "2026-10-23T17:30:00.000Z",
@@ -84,6 +85,7 @@ Key formats:
 - `need`: `p|<possible name>` or `m|<meal id>|<if-out item name>`.
 - `picks`: `<meal id>|<group label>`. The value is an option name or `__none`.
 - `ticks`: lowercase item name.
+- `skips`: lowercase item name. Items removed from this basket without being bought.
 - `thisWeek` is `null` until the first shop finishes.
 - `updatedAt` is set on every local change. It is an empty string for untouched example data. Sync uses it to decide which copy is newer.
 
@@ -108,6 +110,8 @@ First run with no stored data loads example data (`examples: true`) with two mea
 
 Sections display in this order: Regulars, Needed, For meals. Empty sections do not show.
 
+`buildBasket` ignores `skips`. The Shop list view splits its result into the live basket and the removed list. Counts and progress use the live basket only.
+
 ## 8. Screens
 
 A fixed bottom tab bar has three tabs: **Shop list**, **This week**, **Admin**. The active tab has a coral bar on top.
@@ -129,11 +133,12 @@ Shows the example banner when `examples` is true. A two-way switch sits below: *
 - Progress: ticked count in coral at 44px, label "of N in basket", thin progress bar.
 - Items in sections with a ticked/total count per section.
 - Each row is a checkbox button. Ticked rows stay in place, struck through and muted, so positions never jump while the user checks the supermarket site.
+- Each row has an × button (44px) on the right. It removes the item from this basket without ticking it and clears any tick. The item moves to a **Removed** list below the sections, with a count and a Put back button per item. Put back returns it unticked to its usual place.
 - **Finish shop** asks for confirmation inline. The text says how many items are unticked. Confirming does this:
   - `thisWeek` becomes a snapshot of the planned meals. `detail` is the picked options joined by commas.
-  - `plan` resets to empty (no meals, needs, picks, extras or ticks). Regulars and possibles stay.
+  - `plan` resets to empty (no meals, needs, picks, extras, ticks or removed items). Regulars and possibles stay.
   - The app switches to the This week tab and Plan mode.
-- Empty basket shows a short instruction instead.
+- Empty basket shows a short instruction instead, plus the Removed list if it has items.
 
 ### 8.2 This week
 
@@ -173,7 +178,7 @@ Brand: Effective Strategy (Thomas Haynes). Flat, opaque, square, generous whites
 
 - Fonts: Libre Baskerville Bold for the page heading (34px, coral full stop). Inter for everything else (17px body, 15px secondary, 14px notes). Load from Google Fonts with system fallbacks. The service worker caches them.
 - Corners: square. Exceptions: buttons 2px, inputs 4px, chips fully rounded.
-- No shadows, gradients, emoji or icons. The checkbox is a 28px square with a CSS-drawn tick on a coral fill.
+- No shadows, gradients, emoji or icons. One exception: the × character on basket rows, which the user asked for. The checkbox is a 28px square with a CSS-drawn tick on a coral fill.
 - Sentence case everywhere. UK English.
 - Tap targets 44px or more. Rows 60px minimum. Inputs 17px so iOS does not zoom.
 - Single light theme. The brand has no dark palette.
@@ -236,6 +241,7 @@ Sync checks, run against a mocked Google sign-in and Drive:
 17. A change uploads after the delay. Another device picks it up when it comes back into view. The later save wins.
 18. A device that changed its data before its first link still takes the Drive copy and does not overwrite Drive.
 19. An expired token or a 401 shows the reconnect bar. Tapping it renews without the consent screen. Disconnect stops uploads and keeps local data.
+20. Removing a basket item takes it out of the list and the counts, clears its tick and shows it under Removed. Put back restores it unticked.
 
 Still to verify on a real phone: layout at 360 to 430px wide, tab bar and safe areas, install flow on iPhone and Android, offline launch, and clipboard behaviour in standalone mode.
 

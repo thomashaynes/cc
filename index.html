@@ -127,6 +127,20 @@ p { margin: 0 0 12px; }
   transform: rotate(45deg);
 }
 .done .nm { text-decoration: line-through; color: var(--muted); }
+.brow { display: flex; align-items: center; border-bottom: 1px solid var(--deep); }
+.brow .row { flex: 1; min-width: 0; border-bottom: 0; }
+.x {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 28px;
+  line-height: 1;
+}
+.x:hover { color: var(--accent-hover); }
 
 .item {
   display: flex;
@@ -305,7 +319,7 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
 
   // ---------- state ----------
 
-  function emptyPlan() { return { meals: [], need: {}, picks: {}, extras: [], ticks: {} }; }
+  function emptyPlan() { return { meals: [], need: {}, picks: {}, extras: [], ticks: {}, skips: {} }; }
   function emptyState() {
     return { updatedAt: '', examples: false, regulars: [], possibles: [], meals: [], plan: emptyPlan(), thisWeek: null };
   }
@@ -374,6 +388,7 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
     if (isObj(p.picks)) Object.keys(p.picks).forEach(function (k) { if (typeof p.picks[k] === 'string') s.plan.picks[k] = p.picks[k]; });
     s.plan.extras = cleanList(p.extras);
     if (isObj(p.ticks)) Object.keys(p.ticks).forEach(function (k) { if (p.ticks[k] === true) s.plan.ticks[norm(k)] = true; });
+    if (isObj(p.skips)) Object.keys(p.skips).forEach(function (k) { if (p.skips[k] === true) s.plan.skips[norm(k)] = true; });
 
     var w = raw.thisWeek;
     if (isObj(w) && typeof w.shoppedAt === 'string' && !isNaN(new Date(w.shoppedAt).getTime())) {
@@ -659,7 +674,9 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
   }
 
   function renderShop() {
-    var basket = buildBasket(state);
+    var all = buildBasket(state);
+    var basket = all.filter(function (it) { return !state.plan.skips[it.key]; });
+    var removed = all.filter(function (it) { return state.plan.skips[it.key]; });
     var ticked = basket.filter(function (it) { return state.plan.ticks[it.key]; }).length;
     var h = heading('Shop list');
     if (state.examples) {
@@ -667,7 +684,7 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
         '<button type="button" class="btn alt" data-act="clearExamples">Clear examples</button></div>';
     }
     h += switcher('mode', ui.mode, [['plan', 'Plan'], ['basket', 'Basket ' + ticked + '/' + basket.length]]);
-    h += ui.mode === 'basket' ? renderBasket(basket, ticked) : renderPlan(basket);
+    h += ui.mode === 'basket' ? renderBasket(basket, ticked, removed) : renderPlan(basket);
     return h;
   }
 
@@ -737,9 +754,16 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
     return h;
   }
 
-  function renderBasket(basket, ticked) {
+  function renderRemoved(removed) {
+    if (!removed.length) return '';
+    return '<h2>Removed <span class="count">' + removed.length + '</span></h2><div class="list">' + removed.map(function (it) {
+      return '<div class="item"><span class="nm muted">' + esc(it.name) + '</span><button type="button" class="link" data-act="unskip" data-key="' + esc(it.key) + '" aria-label="Put ' + esc(it.name) + ' back">Put back</button></div>';
+    }).join('') + '</div>';
+  }
+
+  function renderBasket(basket, ticked, removed) {
     if (!basket.length) {
-      return '<p class="empty">Nothing in the basket yet. Go to Plan, then tick meals, mark what you need or add extras.</p>';
+      return '<p class="empty">Nothing in the basket yet. Go to Plan, then tick meals, mark what you need or add extras.</p>' + renderRemoved(removed);
     }
     var total = basket.length, pct = Math.round(ticked / total * 100);
     var h = '<div class="progress"><span class="big">' + ticked + '</span><span class="of">of ' + total + ' in basket</span>' +
@@ -750,15 +774,16 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
       var t = its.filter(function (it) { return state.plan.ticks[it.key]; }).length;
       h += '<h2>' + esc(sec) + ' <span class="count">' + t + '/' + its.length + '</span></h2><div class="list">';
       its.forEach(function (it) {
-        h += checkRow({
+        h += '<div class="brow">' + checkRow({
           name: it.name,
           note: it.notes.length ? it.notes.join(', ') : '',
           checked: !!state.plan.ticks[it.key],
           attrs: 'data-act="tick" data-key="' + esc(it.key) + '"'
-        });
+        }) + '<button type="button" class="x" data-act="skip" data-key="' + esc(it.key) + '" aria-label="Remove ' + esc(it.name) + ' from this basket">&times;</button></div>';
       });
       h += '</div>';
     });
+    h += renderRemoved(removed);
     if (tmp.confirmFinish) {
       var left = total - ticked;
       h += '<div class="confirm"><p>' + (left
@@ -1097,6 +1122,13 @@ nav.tabs button[aria-current="page"] { border-top-color: var(--accent); color: v
         p.extras.splice(i, 1);
         return commit();
 
+      case 'skip':
+        p.skips[key] = true;
+        delete p.ticks[key];
+        return commit();
+      case 'unskip':
+        delete p.skips[key];
+        return commit();
       case 'tick':
         if (p.ticks[key]) delete p.ticks[key]; else p.ticks[key] = true;
         return commit();
