@@ -15,13 +15,14 @@ A copy of [CleanFrame](https://github.com/nthnclrk/CleanFrame) 0.7.0 (commit 845
 
 Native Home replacement is not possible on this TV: `intershell_support` is disabled. Open CleanFrame from Apps.
 
-## My changes (version 0.7.1)
+## My changes (version 0.7.2)
 
 - 24-hour clock with a leading zero (`app/main.js`, `clockText`)
 - Art Mode button removed from the top bar (`app/main.js`, `utils`)
 - White marks for BBC iPlayer, ITVX and Channel 4 (`app/assets/icons/`, `app/main.js` `PRIMARY_APPS`, `app/device.js` `IDS`, `app/assets/icons/metrics.js`)
   - Channel 4 and ITVX come from Simple Icons 16.38.0 (CC0)
   - BBC iPlayer is the play symbol traced from the app icon
+- TizenTube (sideloaded, `xvvl3S1TT1.TizenTubeStandalone`) uses the YouTube mark with a small T badge (`app/assets/icons/tizentube.svg`)
 - Saved Home entries stored by TV app ID move to the new branded apps (`app/main.js`, `clean`)
 - Version raised to 0.7.1 (`app/config.xml`)
 
@@ -31,6 +32,7 @@ The project's own build and install scripts do not run on Windows. Build the uns
 
 ```
 cd cleanframe
+mkdir -p dist
 python3 -c "import sys; sys.path.insert(0,'scripts'); from font_assets import ROOT, write_widget_archive; write_widget_archive(ROOT/'dist/CleanFrame-unsigned.wgt', include_private=False, identity={'package_id':'Vjn9LLyyrJ','app_id':'Vjn9LLyyrJ.CleanFrame'})"
 ```
 
